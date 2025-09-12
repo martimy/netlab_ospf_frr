@@ -1,4 +1,4 @@
-# NetLab Tutorial: Setting Up and Running a Simple OSPF Lab with FRR
+# NetLab Tutorial: Simple OSPF Lab with FRR
 
 This tutorial guides you through installing [netlab](https://netlab.tools/), a network simulation tool for automating virtual network labs. We'll use it to deploy a simple OSPF lab with two FRR (Free Range Routing) routers, based on the [netlab GitHub example](https://netlab.tools/example/github/#tutorial-github). This expands the original tutorial by including detailed prerequisites, verification steps, troubleshooting tips, and cleanup instructions. The lab demonstrates basic OSPF routing between two routers (`r1` and `r2`) with stub networks.
 
