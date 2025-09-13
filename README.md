@@ -1,30 +1,18 @@
 # NetLab Tutorial: Simple OSPF Lab with FRR
 
-This tutorial guides you through installing [netlab](https://netlab.tools/), a network simulation tool for automating virtual network labs. We'll use it to deploy a simple OSPF lab with two FRR (Free Range Routing) routers, based on the [netlab GitHub example](https://netlab.tools/example/github/#tutorial-github). This expands the original tutorial by including detailed prerequisites, verification steps, troubleshooting tips, and cleanup instructions. The lab demonstrates basic OSPF routing between two routers (`r1` and `r2`) with stub networks.
+This tutorial guides you through installing [netlab](https://netlab.tools/), a network simulation tool for automating virtual network labs. We'll use it to deploy a simple OSPF lab with three FRR (Free Range Routing) routers. The lab demonstrates basic OSPF routing between three routers with stub networks.
 
 NetworkLab is a platform for creating and managing virtual network environments, using [Containerlab](https://containerlab.dev/) with Docker to quickly deploy and test network topologies. With Ansible integration, users automate device provisioning and configuration, ensuring efficient, repeatable setups for simulation, education, and network design.
 
-It is highly recommended that you become familiar with clab, Docker, and Ansible to gain the full benefits of netlab and also to be able to troubleshoot any problems that may arise while creating netlab environmnets.
+It is highly recommended that you become familiar with clab, Docker, and Ansible to gain the full benefits of netlab and also to be able to troubleshoot any problems that may arise while creating netlab environments.
+
+![Network Topology](topology.png)
 
 ## Prerequisites
 
 - **OS**: Ubuntu 22.04 LTS (tested in a Vagrant box; works on similar Debian-based systems).
 - **Hardware**: At least 4GB RAM and 2 CPU cores (for the lab containers).
 - **Git**: For cloning repos (optional, but recommended):
-  ```
-  sudo apt install git -y
-  ```
-
-```
-    - **Virtualization**: Docker (for Containerlab). Install if needed:
-    ```
-    sudo apt update
-    sudo apt install docker.io -y
-    sudo systemctl start docker
-    sudo systemctl enable docker
-    sudo usermod -aG docker $USER  # Log out and back in for group changes
-    ```
-```
 
 ## Step 1: Install NetLab
 
@@ -109,10 +97,10 @@ NetLab generates configs, deploys containers, and applies initial OSPF configs.
 2. Verify the network deployment:
 
     ```
-    sudo clab inspect clab.yml  # List running containers and IPs
+    sudo clab inspect -t clab.yml  # List running containers and IPs
     ```
 
-## Step 4: Interact with the Lab
+## Step 4: Interact with the devices
 
 Once devices are running, connect to devices and verify OSPF.
 
@@ -125,12 +113,27 @@ Once devices are running, connect to devices and verify OSPF.
 
 2. In the container (vtysh mode):
    ```
-   vtysh
-   show interface brief  # Check interfaces (eth1 stub up, eth2 P2P up, lo up)
-   show ip route         # Verify OSPF routes (e.g., O 10.0.0.2/32 via 10.1.0.2)
-   show ip ospf neighbor # Check OSPF adjacency (should show r2 as Full/DR)
-   exit  # Exit vtysh
-   exit  # Exit container
+   r1(bash)# vtysh
+
+   Hello, this is FRRouting (version 10.4.1_git).
+   Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+   r1# show interface brief
+   Interface       Status  VRF             Addresses
+   ---------       ------  ---             ---------
+   eth1            up      default         172.16.0.1/24
+   eth2            up      default         10.1.0.1/30
+   eth3            up      default         10.1.0.9/30
+   lo              up      default         10.0.0.1/32
+
+   Interface       Status  VRF             Addresses
+   ---------       ------  ---             ---------
+   eth0            up      mgmt            192.168.121.101/24
+   mgmt            up      mgmt
+
+   r1# exit
+   r1(bash)# exit
+   logout
    ```
 
 ## Step 5: Cleanup
@@ -146,31 +149,77 @@ Stop and remove the lab.
    ```
    netlab down --cleanup
    ```
-   - Removes `clab.yml`, `clab_files/`, `hosts.yml`, etc. Only `topology.yml` remains.
+   
+   This removes `clab.yml`, `clab_files/`, `hosts.yml`, etc. Only `topology.yml` remains.
 
-## Next Steps and Expansion Ideas
+## Verification and Reporting
 
-- **Scale the Lab**: Add more routers in `topology.yml` (e.g., `r3: { links: - r1: 10.2.0.1/30 }`).
-- **Add BGP**: Include `module: [ospf, bgp]` and define ASNs.
-- **Custom Configs**: Add `config: |` in `topology.yml` for manual FRR commands.
-- **Automation**: Integrate with GitHub Actions for CI/CD labs.
-- **Troubleshooting Logs**: Check `netlab.snapshot.yml` for transformed topology; use `netlab validate topology.yml` for errors.
+The **netlab status** command displays the status and workload (VMs or containers) of the current or selected lab instance.
 
-```dot
-graph {
-  bgcolor="transparent"
-  nodesep="0.5"
-  ranksep="0.5"
-  node [fillcolor="#ff9f01" margin="0.3,0.1" shape="box" style="rounded,filled" fontname="Verdana" fontsize="11"]
-  edge [fontname="Verdana" labelfontsize="8" labeldistance="1.5"]
-  "r1" [label="r1\n10.0.0.1/32"]
-  "r2" [label="r2\n10.0.0.2/32"]
-  nlabospffr_1 [fillcolor="#d1bfab" fontsize="11" margin="0.3,0.1" label="172.16.0.0/24"]
-  nlabospffr_2 [fillcolor="#d1bfab" fontsize="11" margin="0.3,0.1" label="172.16.1.0/24"]
- "r1" -- "nlabospffr_1" [fillcolor="#d1bfab" fontsize="11" margin="0.3,0.1"]
- "r2" -- "nlabospffr_2" [fillcolor="#d1bfab" fontsize="11" margin="0.3,0.1"]
- "r1" -- "r2"
-}
+```
+$ netlab status
+
+lab default in /home/vagrant/nlab_ospf_frr
+  status: started
+  provider(s): clab
+
+┏━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ node ┃ device ┃ image                    ┃ mgmt IPv4       ┃ connection ┃ provider ┃ VM/container        ┃ status        ┃
+┡━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ r1   │ frr    │ quay.io/frrouting/frr:1… │ 192.168.121.101 │ docker     │ clab     │ clab-nlabospffrr-r1 │ Up 16 minutes │
+├──────┼────────┼──────────────────────────┼─────────────────┼────────────┼──────────┼─────────────────────┼───────────────┤
+│ r2   │ frr    │ quay.io/frrouting/frr:1… │ 192.168.121.102 │ docker     │ clab     │ clab-nlabospffrr-r2 │ Up 16 minutes │
+├──────┼────────┼──────────────────────────┼─────────────────┼────────────┼──────────┼─────────────────────┼───────────────┤
+│ r3   │ frr    │ quay.io/frrouting/frr:1… │ 192.168.121.103 │ docker     │ clab     │ clab-nlabospffrr-r3 │ Up 16 minutes │
+└──────┴────────┴──────────────────────────┴─────────────────┴────────────┴──────────┴─────────────────────┴───────────────┘
+```
+
+The **netlab report** command creates one of available system reports.
+
+```
+netlab report ospf-areas
+
+OSPF Area 0.0.0.0
+
+|-----------------|-----------------|-----------------|----------------------|
+| Router          | Interface       |    IPv4 Address | Neighbor(s)          |
+|-----------------|-----------------|-----------------|----------------------|
+| r1              | Loopback        |     10.0.0.1/32 |                      |
+|                 | eth2            |     10.1.0.1/30 | r2                   |
+|                 | eth3            |     10.1.0.9/30 | r3                   |
+|-----------------|-----------------|-----------------|----------------------|
+| r2              | Loopback        |     10.0.0.2/32 |                      |
+|                 | eth2            |     10.1.0.2/30 | r1                   |
+|                 | eth3            |     10.1.0.5/30 | r3                   |
+|-----------------|-----------------|-----------------|----------------------|
+| r3              | Loopback        |     10.0.0.3/32 |                      |
+|                 | eth2            |     10.1.0.6/30 | r2                   |
+|                 | eth3            |    10.1.0.10/30 | r1                   |
+|-----------------|-----------------|-----------------|----------------------|
+
+OSPF Area 0.0.0.1
+
+|-----------------|-----------------|-----------------|----------------------|
+| Router          | Interface       |    IPv4 Address | Neighbor(s)          |
+|-----------------|-----------------|-----------------|----------------------|
+| r1              | eth1            |   172.16.0.1/24 | passive              |
+|-----------------|-----------------|-----------------|----------------------|
+
+OSPF Area 0.0.0.2
+
+|-----------------|-----------------|-----------------|----------------------|
+| Router          | Interface       |    IPv4 Address | Neighbor(s)          |
+|-----------------|-----------------|-----------------|----------------------|
+| r2              | eth1            |   172.16.1.2/24 | passive              |
+|-----------------|-----------------|-----------------|----------------------|
+
+OSPF Area 0.0.0.3
+
+|-----------------|-----------------|-----------------|----------------------|
+| Router          | Interface       |    IPv4 Address | Neighbor(s)          |
+|-----------------|-----------------|-----------------|----------------------|
+| r3              | eth1            |   172.16.2.3/24 | passive              |
+|-----------------|-----------------|-----------------|----------------------|
 ```
 
 # References
