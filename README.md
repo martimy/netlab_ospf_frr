@@ -222,6 +222,10 @@ OSPF Area 0.0.0.3
 |-----------------|-----------------|-----------------|----------------------|
 ```
 
-# References
+## References
 
 - https://www.packetswitch.co.uk/netlab-the-fastest-way-to-build-network-labs/
+
+## Author
+
+Created by Maen Artimy - [Personal Blog](http://adhocnode.com)
